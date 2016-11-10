@@ -358,7 +358,7 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     
     @Input() expandedRows: any[];
 
-    @Input() groupingTemplate: any;
+    @Input() groupingTemplate: TemplateRef<any>;
 
     @Input() rowGrouping: boolean;
     
