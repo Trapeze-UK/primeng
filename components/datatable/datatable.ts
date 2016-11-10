@@ -193,7 +193,7 @@ export class RowExpansionLoader {
                                         </span>
                                         <input type="text" class="ui-cell-editor ui-state-highlight" *ngIf="col.editable" [(ngModel)]="rowData[col.field]"
                                                 (blur)="switchCellToViewMode($event.target,col,rowData,true)" (keydown)="onCellEditorKeydown($event, col, rowData, colIndex)"/>
-                                        <a href="#" *ngIf="col.expander" (click)="toggleRow(rowData,$event)">
+                                        <a href="#" *ngIf="col.expander && (!col.enabledIfExists || (rowData[col.enabledIfExists] && rowData[col.enabledIfExists].length > 0))" (click)="toggleRow(rowData,$event)">
                                             <span class="ui-row-toggler fa fa-fw ui-c" [ngClass]="{'fa-chevron-circle-down':isRowExpanded(rowData), 'fa-chevron-circle-right': !isRowExpanded(rowData)}"></span>
                                         </a>
                                         <p-dtRadioButton *ngIf="col.selectionMode=='single'" (onClick)="selectRowWithRadio($event, rowData)" [checked]="isSelected(rowData)"></p-dtRadioButton>
@@ -291,7 +291,7 @@ export class RowExpansionLoader {
                                     </span>
                                     <input type="text" class="ui-cell-editor ui-state-highlight" *ngIf="col.editable" [(ngModel)]="rowData[col.field]"
                                             (blur)="switchCellToViewMode($event.target,col,rowData,true)" (keydown)="onCellEditorKeydown($event, col, rowData, colIndex)"/>
-                                    <a href="#" *ngIf="col.expander" (click)="toggleRow(rowData,$event)">
+                                    <a href="#" *ngIf="col.expander && (!col.enabledIfExists || (rowData[col.enabledIfExists] && rowData[col.enabledIfExists].length > 0))" (click)="toggleRow(rowData,$event)">
                                         <span class="ui-row-toggler fa fa-fw ui-c" [ngClass]="{'fa-chevron-circle-down':isRowExpanded(rowData), 'fa-chevron-circle-right': !isRowExpanded(rowData)}"></span>
                                     </a>
                                     <p-dtRadioButton *ngIf="col.selectionMode=='single'" (onClick)="selectRowWithRadio($event, rowData)" [checked]="isSelected(rowData)"></p-dtRadioButton>

@@ -77,6 +77,7 @@ export class Column implements AfterContentInit{
     @Input() styleClass: string;
     @Input() hidden: boolean;
     @Input() expander: boolean;
+    @Input() enabledIfExists: string;
     @Input() selectionMode: string;
     @Input() filterPlaceholder: string;
     @Output() sortFunction: EventEmitter<any> = new EventEmitter();
