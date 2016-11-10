@@ -188,6 +188,7 @@ export class RowExpansionLoader {
                                     <p-rowExpansionLoader [rowData]="rowData" [template]="rowExpansionTemplate"></p-rowExpansionLoader>
                                 </td>
                             </tr>
+                            <p-rowExpansionLoader *ngIf="rowGrouping && isRowExpanded(rowData)" [rowData]="rowData" [template]="groupingTemplate"></p-rowExpansionLoader>
                         </template>
                         
                         <tr *ngIf="isEmpty()" class="ui-widget-content">
@@ -251,6 +252,7 @@ export class RowExpansionLoader {
                                     <p-rowExpansionLoader [rowData]="rowData" [template]="rowExpansionTemplate"></p-rowExpansionLoader>
                                 </td>
                             </tr>
+                             <p-rowExpansionLoader *ngIf="rowGrouping && isRowExpanded(rowData)" [rowData]="rowData" [template]="groupingTemplate"></p-rowExpansionLoader>
                         </template>
                         
                         <tr *ngIf="isEmpty()" class="ui-widget-content">
@@ -355,6 +357,10 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     @Input() paginatorPosition: string = 'bottom';
     
     @Input() expandedRows: any[];
+
+    @Input() groupingTemplate: any;
+
+    @Input() rowGrouping: boolean;
     
     @Output() onEditInit: EventEmitter<any> = new EventEmitter();
 
