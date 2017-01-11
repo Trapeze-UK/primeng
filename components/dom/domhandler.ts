@@ -170,11 +170,13 @@ export class DomHandler {
         element.style.opacity = 0;
 
         let last = +new Date();
+        let opacity = 0;
         let tick = function () {
-            element.style.opacity = +element.style.opacity + (new Date().getTime() - last) / duration;
+            opacity = +element.style.opacity + (new Date().getTime() - last) / duration;
+            element.style.opacity = opacity;
             last = +new Date();
 
-            if (+element.style.opacity < 1) {
+            if (+opacity < 1) {
                 (window.requestAnimationFrame && requestAnimationFrame(tick)) || setTimeout(tick, 16);
             }
         };
@@ -190,11 +192,13 @@ export class DomHandler {
 
         let fading = setInterval(() => {
             opacity = opacity - gap;
-            element.style.opacity = opacity;
 
             if (opacity <= 0) {
+                opacity = 0;
                 clearInterval(fading);
             }
+            
+            element.style.opacity = opacity;
         }, interval);
     }
 
@@ -357,28 +361,52 @@ export class DomHandler {
     }
 
     isIE() {
-    var ua = window.navigator.userAgent;
+        var ua = window.navigator.userAgent;
 
-    var msie = ua.indexOf('MSIE ');
-    if (msie > 0) {
-        // IE 10 or older => return version number
-        return true;
+        var msie = ua.indexOf('MSIE ');
+        if (msie > 0) {
+            // IE 10 or older => return version number
+            return true;
+        }
+
+        var trident = ua.indexOf('Trident/');
+        if (trident > 0) {
+            // IE 11 => return version number
+            var rv = ua.indexOf('rv:');
+            return true;
+        }
+
+        var edge = ua.indexOf('Edge/');
+        if (edge > 0) {
+           // Edge (IE 12+) => return version number
+           return true;
+        }
+
+        // other browser
+        return false;
     }
-
-    var trident = ua.indexOf('Trident/');
-    if (trident > 0) {
-        // IE 11 => return version number
-        var rv = ua.indexOf('rv:');
-        return true;
+    
+    appendChild(element: any, target: any) {
+        if(this.isElement(target))
+            target.appendChild(element);
+        else if(target.el && target.el.nativeElement)
+            target.el.nativeElement.appendChild(element);
+        else
+            throw 'Cannot append ' + target + ' to ' + element;
     }
-
-    var edge = ua.indexOf('Edge/');
-    if (edge > 0) {
-       // Edge (IE 12+) => return version number
-       return true;
+    
+    removeChild(element: any, target: any) {
+        if(this.isElement(target))
+            target.removeChild(element);
+        else if(target.el && target.el.nativeElement)
+            target.el.nativeElement.removeChild(element);
+        else
+            throw 'Cannot remove ' + element + ' from ' + target;
     }
-
-    // other browser
-    return false;
-}
+    
+    isElement(obj: any) {
+        return (typeof HTMLElement === "object" ? obj instanceof HTMLElement :
+            obj && typeof obj === "object" && obj !== null && obj.nodeType === 1 && typeof obj.nodeName === "string"
+        );
+    }
 }
