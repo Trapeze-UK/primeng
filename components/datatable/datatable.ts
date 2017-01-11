@@ -411,8 +411,6 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     @Input() emptyMessage: string = 'No records found';
     
     @Input() paginatorPosition: string = 'bottom';
-    
-    @Input() expandedRows: any[];
 
     @Input() groupingTemplate: TemplateRef<any>;
 
