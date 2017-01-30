@@ -173,7 +173,7 @@ export class ColumnFooters {
                                 (keydown)="dt.onCellEditorKeydown($event, col, rowData, colIndex)"/>
                             <p-columnEditorTemplateLoader *ngIf="col.editorTemplate" [column]="col" [rowData]="rowData"></p-columnEditorTemplateLoader>
                         </div>
-                        <a href="#" *ngIf="col.expander" (click)="dt.toggleRow(rowData,$event)">
+                        <a href="#" *ngIf="col.expander && (!col.enabledIfExists || (rowData[col.enabledIfExists] && rowData[col.enabledIfExists].length > 0))" (click)="dt.toggleRow(rowData,$event)">
                             <span class="ui-row-toggler fa fa-fw ui-c" [ngClass]="{'fa-chevron-circle-down':dt.isRowExpanded(rowData), 'fa-chevron-circle-right': !dt.isRowExpanded(rowData)}"></span>
                         </a>
                         <p-dtRadioButton *ngIf="col.selectionMode=='single'" (onClick)="dt.selectRowWithRadio($event, rowData)" [checked]="dt.isSelected(rowData)"></p-dtRadioButton>
@@ -189,6 +189,7 @@ export class ColumnFooters {
                     <p-rowExpansionLoader [rowData]="rowData" [template]="dt.rowExpansionTemplate"></p-rowExpansionLoader>
                 </td>
             </tr>
+            <p-rowExpansionLoader *ngIf="dt.rowGrouping && dt.isRowExpanded(rowData)" [rowData]="rowData" [template]="dt.groupingTemplate"></p-rowExpansionLoader>
         </template>
 
         <tr *ngIf="dt.isEmpty()" class="ui-widget-content">
@@ -468,6 +469,10 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     @Input() expandableRows: boolean;
     
     @Input() expandedRows: any[];
+
+    @Input() groupingTemplate: TemplateRef<any>;
+
+    @Input() rowGrouping: boolean;
     
     @Input() expandableRowGroups: boolean;
     
