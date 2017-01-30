@@ -105,7 +105,7 @@ export class RowExpansionLoader {
                 </span>
                 <span class="ui-sortable-column-icon fa fa-fw fa-sort" *ngIf="col.sortable"
                      [ngClass]="{'fa-sort-desc': (dt.getSortOrder(col) == -1),'fa-sort-asc': (dt.getSortOrder(col) == 1)}"></span>
-                <input type="text" pInputText class="ui-column-filter" [attr.placeholder]="col.filterPlaceholder" *ngIf="col.filter&&!col.filterTemplate" [value]="dt.filters[col.field] ? filters[col.field].value : ''" 
+                <input type="text" pInputText class="ui-column-filter" [attr.placeholder]="col.filterPlaceholder" *ngIf="col.filter&&!col.filterTemplate" [value]="dt.filters[col.field] ? dt.filters[col.field].value : ''" 
                     (click)="dt.onFilterInputClick($event)" (keyup)="dt.onFilterKeyup($event.target.value, col.field, col.filterMatchMode)"/>
                 <p-columnFilterTemplateLoader [column]="col" *ngIf="col.filterTemplate"></p-columnFilterTemplateLoader>
                 <p-dtCheckbox *ngIf="col.selectionMode=='multiple'" (onChange)="dt.toggleRowsWithCheckbox($event)" [checked]="dt.allSelected" [disabled]="dt.isEmpty()"></p-dtCheckbox>
@@ -115,7 +115,7 @@ export class RowExpansionLoader {
 })
 export class ColumnHeaders {
         
-    constructor(@Inject(forwardRef(() => DataTable)) private dt:DataTable) {}
+    constructor(@Inject(forwardRef(() => DataTable)) public dt:DataTable) {}
     
     @Input("pColumnHeaders") columns: Column[];
 }
@@ -135,7 +135,7 @@ export class ColumnHeaders {
 })
 export class ColumnFooters {
         
-    constructor(@Inject(forwardRef(() => DataTable)) private dt:DataTable) {}
+    constructor(@Inject(forwardRef(() => DataTable)) public dt:DataTable) {}
     
     @Input("pColumnFooters") columns: Column[];
 }
@@ -158,10 +158,10 @@ export class ColumnFooters {
                     (click)="dt.handleRowClick($event, rowData)" (dblclick)="dt.rowDblclick($event,rowData)" (contextmenu)="dt.onRowRightClick($event,rowData)" (touchstart)="dt.handleRowTap($event, rowData)"
                     [ngClass]="{'ui-datatable-even':even&&dt.rowGroupMode!='rowspan','ui-datatable-odd':odd&&dt.rowGroupMode!='rowspan','ui-state-highlight': dt.isSelected(rowData)}">
                 <template ngFor let-col [ngForOf]="columns" let-colIndex="index">
-                    <td *ngIf="!dt.rowGroupMode || (dt.rowGroupMode == 'subheader') ||
+                    <td #cell *ngIf="!dt.rowGroupMode || (dt.rowGroupMode == 'subheader') ||
                         (dt.rowGroupMode=='rowspan' && ((dt.sortField==col.field && dt.rowGroupMetadata[dt.resolveFieldData(rowData,dt.sortField)].index == rowIndex) || (dt.sortField!=col.field)))"
                         [ngStyle]="col.style" [class]="col.styleClass" [style.display]="col.hidden ? 'none' : 'table-cell'"
-                        [ngClass]="{'ui-editable-column':col.editable,'ui-selection-column':col.selectionMode}" (click)="dt.switchCellToEditMode($event.target,col,rowData)"
+                        [ngClass]="{'ui-editable-column':col.editable,'ui-selection-column':col.selectionMode}" (click)="dt.switchCellToEditMode(cell,col,rowData)"
                         [attr.rowspan]="(dt.rowGroupMode=='rowspan' && dt.sortField == col.field && dt.rowGroupMetadata[dt.resolveFieldData(rowData,dt.sortField)].index == rowIndex) ? dt.rowGroupMetadata[dt.resolveFieldData(rowData,dt.sortField)].size : null">
                         <span class="ui-column-title" *ngIf="dt.responsive">{{col.header}}</span>
                         <span class="ui-cell-data" *ngIf="!col.bodyTemplate && !col.expander && !col.selectionMode">{{dt.resolveFieldData(rowData,col.field)}}</span>
@@ -192,13 +192,13 @@ export class ColumnFooters {
         </template>
 
         <tr *ngIf="dt.isEmpty()" class="ui-widget-content">
-            <td [attr.colspan]="dt.visibleColumns().length" class="ui-datatable-emptymessage">{{emptyMessage}}</td>
+            <td [attr.colspan]="dt.visibleColumns().length" class="ui-datatable-emptymessage">{{dt.emptyMessage}}</td>
         </tr>
     `
 })
 export class TableBody {
         
-    constructor(@Inject(forwardRef(() => DataTable)) private dt:DataTable) {}
+    constructor(@Inject(forwardRef(() => DataTable)) public dt:DataTable) {}
     
     @Input("pTableBody") columns: Column[];
     
@@ -224,18 +224,17 @@ export class TableBody {
         </div>
         <div #scrollBody class="ui-datatable-scrollable-body" [ngStyle]="{'width': width,'max-height':dt.scrollHeight}">
             <table [class]="dt.tableStyleClass" [ngStyle]="dt.tableStyle">
+                <colgroup class="ui-datatable-scrollable-colgroup">
+                    <col *ngFor="let col of dt.visibleColumns()" />
+                </colgroup>
                 <tbody [ngClass]="{'ui-datatable-data ui-widget-content': true, 'ui-datatable-hoverable-rows': (dt.rowHover||dt.selectionMode)}" [pTableBody]="columns"></tbody>
             </table>
         </div>
-    `,
-    host:{
-        '[class.ui-datatable-scrollable-view]': 'true',
-        '[class.ui-datatable-frozen-view]': 'frozen'
-    }
+    `
 })
 export class ScrollableView implements AfterViewInit, OnDestroy {
         
-    constructor(@Inject(forwardRef(() => DataTable)) private dt:DataTable, private domHandler: DomHandler, private el: ElementRef, public renderer: Renderer,) {}
+    constructor(@Inject(forwardRef(() => DataTable)) public dt:DataTable, public domHandler: DomHandler, public el: ElementRef, public renderer: Renderer,) {}
     
     @Input("pScrollableView") columns: Column[];
     
@@ -286,24 +285,13 @@ export class ScrollableView implements AfterViewInit, OnDestroy {
             });
         }
         
-        let scrollBarWidth = this.calculateScrollbarWidth();
+        let scrollBarWidth = this.domHandler.calculateScrollbarWidth();
         if(!this.frozen)
             this.scrollHeaderBox.style.marginRight = scrollBarWidth + 'px';            
         else
             this.scrollBody.style.paddingBottom = scrollBarWidth + 'px';
     }
-    
-    calculateScrollbarWidth(): number {
-        let scrollDiv = document.createElement("div");
-        scrollDiv.className = "ui-scrollbar-measure";
-        document.body.appendChild(scrollDiv);
-
-        let scrollbarWidth = scrollDiv.offsetWidth - scrollDiv.clientWidth;
-        document.body.removeChild(scrollDiv);
-        
-        return scrollbarWidth;
-    }
-        
+            
     ngOnDestroy() {
         if(this.bodyScrollListener) {
             this.bodyScrollListener();
@@ -338,128 +326,29 @@ export class ScrollableView implements AfterViewInit, OnDestroy {
                             <tr *ngFor="let footerRow of footerColumnGroup.rows" [pColumnFooters]="footerRow.columns"></tr>
                         </template>
                     </tfoot>
-                    <tbody class="ui-datatable-data ui-widget-content">
-                        <template ngFor let-rowData [ngForOf]="dataToRender" let-even="even" let-odd="odd" let-rowIndex="index" [ngForTrackBy]="rowTrackBy">
-                            <tr #rowElement [class]="getRowStyleClass(rowData,rowIndex)" (mouseenter)="hoveredRow = $event.target" (mouseleave)="hoveredRow = null"
-                                    (click)="handleRowClick($event, rowData)" (dblclick)="rowDblclick($event,rowData)" (contextmenu)="onRowRightClick($event,rowData)" (touchstart)="handleRowTap($event, rowData)"
-                                    [ngClass]="{'ui-datatable-even':even,'ui-datatable-odd':odd,'ui-state-hover': (selectionMode && rowElement == hoveredRow), 'ui-state-highlight': isSelected(rowData)}">
-                                <td *ngFor="let col of columns;let colIndex = index" [ngStyle]="col.style" [class]="col.styleClass" [style.display]="col.hidden ? 'none' : 'table-cell'"
-                                    [ngClass]="{'ui-editable-column':col.editable,'ui-selection-column':col.selectionMode}" (click)="switchCellToEditMode($event.target,col,rowData)">
-                                    <span class="ui-column-title" *ngIf="responsive">{{col.header}}</span>
-                                    <span class="ui-cell-data" *ngIf="!col.bodyTemplate && !col.expander && !col.selectionMode">{{resolveFieldData(rowData,col.field)}}</span>
-                                    <span class="ui-cell-data" *ngIf="col.bodyTemplate">
-                                        <p-columnBodyTemplateLoader [column]="col" [rowData]="rowData" [rowIndex]="rowIndex + first"></p-columnBodyTemplateLoader>
-                                    </span>
-                                    <input type="text" class="ui-cell-editor ui-state-highlight" *ngIf="col.editable" [(ngModel)]="rowData[col.field]"
-                                            (blur)="switchCellToViewMode($event.target,col,rowData,true)" (keydown)="onCellEditorKeydown($event, col, rowData, colIndex)"/>
-                                    <div class="ui-row-toggler fa fa-fw ui-c" [ngClass]="{'fa-chevron-circle-down':isRowExpanded(rowData), 'fa-chevron-circle-right': !isRowExpanded(rowData)}"
-                                        *ngIf="col.expander && (!col.enabledIfExists || (rowData[col.enabledIfExists] && rowData[col.enabledIfExists].length > 0))" (click)="toggleRow(rowData)"></div>
-                                    <p-dtRadioButton *ngIf="col.selectionMode=='single'" (onClick)="selectRowWithRadio($event, rowData)" [checked]="isSelected(rowData)"></p-dtRadioButton>
-                                    <p-dtCheckbox *ngIf="col.selectionMode=='multiple'" (onChange)="toggleRowWithCheckbox($event,rowData)" [checked]="isSelected(rowData)"></p-dtCheckbox>
-                                </td>
-                            </tr>
-                            <tr *ngIf="expandableRows && isRowExpanded(rowData)">
-                                <td [attr.colspan]="visibleColumns().length">
-                                    <p-rowExpansionLoader [rowData]="rowData" [template]="rowExpansionTemplate.first"></p-rowExpansionLoader>
-                                </td>
-                            </tr>
-                            <p-rowExpansionLoader *ngIf="rowGrouping && isRowExpanded(rowData)" [rowData]="rowData" [template]="groupingTemplate"></p-rowExpansionLoader>
-                        </template>
-                        
-                        <tr *ngIf="isEmpty()" class="ui-widget-content">
-                            <td [attr.colspan]="visibleColumns().length" class="ui-datatable-emptymessage">{{emptyMessage}}</td>
-                        </tr>
-                    </tbody>
+                    <tbody [ngClass]="{'ui-datatable-data ui-widget-content': true, 'ui-datatable-hoverable-rows': (rowHover||selectionMode)}" [pTableBody]="columns"></tbody>
                 </table>
-                <div class="ui-column-resizer-helper ui-state-highlight" style="display:none"></div>
-                <span class="fa fa-arrow-down ui-datatable-reorder-indicator-up" style="position: absolute; display: none;"></span>
-                <span class="fa fa-arrow-up ui-datatable-reorder-indicator-down" style="position: absolute; display: none;"></span>
             </div>
-            <div class="ui-widget-header ui-datatable-scrollable-header" *ngIf="scrollable" [ngStyle]="{'width': scrollWidth}">
-                <div class="ui-datatable-scrollable-header-box">
-                    <table [class]="tableStyleClass" [ngStyle]="tableStyle">
-                        <thead>
-                            <tr *ngIf="!headerColumnGroup">
-                                <th #headerCell *ngFor="let col of columns" [ngStyle]="col.style" [class]="col.styleClass" [style.display]="col.hidden ? 'none' : 'table-cell'"
-                                    (click)="sort($event,col)" (mouseenter)="hoveredHeader = $event.target" (mouseleave)="hoveredHeader = null"
-                                    [ngClass]="{'ui-state-default ui-unselectable-text':true, 'ui-state-hover': headerCell === hoveredHeader && col.sortable,'ui-state-focus': headerCell === focusedHeader && col.sortable,
-                                    'ui-sortable-column': col.sortable,'ui-state-active': isSorted(col), 'ui-resizable-column': resizableColumns,'ui-selection-column':col.selectionMode}"
-                                    [draggable]="reorderableColumns" (dragstart)="onColumnDragStart($event)" (dragover)="onColumnDragover($event)" (dragleave)="onColumnDragleave($event)" (drop)="onColumnDrop($event)"
-                                    [tabindex]="col.sortable ? tabindex : -1" (focus)="focusedHeader=$event.target" (blur)="focusedHeader=null" (keydown)="onHeaderKeydown($event,col)">
-                                    <span class="ui-column-resizer" *ngIf="resizableColumns && ((columnResizeMode == 'fit' && !lastCol) || columnResizeMode == 'expand')" (mousedown)="initColumnResize($event)"></span>
-                                    <span class="ui-column-title" *ngIf="!col.selectionMode&&!col.headerTemplate">{{col.header}}</span>
-                                    <span class="ui-column-title" *ngIf="col.headerTemplate">
-                                        <p-columnHeaderTemplateLoader [column]="col"></p-columnHeaderTemplateLoader>
-                                    </span>
-                                    <span class="ui-sortable-column-icon fa fa-fw fa-sort" *ngIf="col.sortable"
-                                            [ngClass]="{'fa-sort-desc': (col.field === sortField) && (sortOrder == -1),'fa-sort-asc': (col.field === sortField) && (sortOrder == 1)}"></span>
-                                    <input type="text" pInputText class="ui-column-filter" [attr.placeholder]="col.filterPlaceholder" *ngIf="col.filter" [value]="filters[col.field] ? filters[col.field].value : ''" (click)="onFilterInputClick($event)" (keyup)="onFilterKeyup($event.target.value, col.field, col.filterMatchMode)"/>
-                                    <p-dtCheckbox *ngIf="col.selectionMode=='multiple'" (onChange)="toggleRowsWithCheckbox($event)" [checked]="allSelected" [disabled]="isEmpty()"></p-dtCheckbox>
-                                </th>
-                            </tr>
-                            <template [ngIf]="headerColumnGroup">
-                            <tr *ngFor="let headerRow of headerColumnGroup.rows" class="ui-state-default">
-                                <th #headerCell *ngFor="let col of headerRow.columns" [ngStyle]="col.style" [class]="col.styleClass" [attr.colspan]="col.colspan" [attr.rowspan]="col.rowspan"
-                                    (click)="sort($event,col)" (mouseenter)="hoveredHeader = $event.target" (mouseleave)="hoveredHeader = null" [style.display]="col.hidden ? 'none' : 'table-cell'"
-                                    [ngClass]="{'ui-state-default ui-unselectable-text':true, 'ui-state-hover': headerCell === hoveredHeader && col.sortable,
-                                    'ui-sortable-column': col.sortable,'ui-state-active': isSorted(col), 'ui-resizable-column': resizableColumns}"
-                                    [tabindex]="col.sortable ? tabindex : -1" (focus)="focusedHeader=$event.target" (blur)="focusedHeader=null" (keydown)="onHeaderKeydown($event,col)">
-                                    <span class="ui-column-resizer" *ngIf="resizableColumns && ((columnResizeMode == 'fit' && !lastCol) || columnResizeMode == 'expand')" (mousedown)="initColumnResize($event)"></span>
-                                    <span class="ui-column-title" *ngIf="!col.selectionMode&&!col.headerTemplate">{{col.header}}</span>
-                                    <span class="ui-column-title" *ngIf="col.headerTemplate">
-                                        <p-columnHeaderTemplateLoader [column]="col"></p-columnHeaderTemplateLoader>
-                                    </span>
-                                    <span class="ui-sortable-column-icon fa fa-fw fa-sort" *ngIf="col.sortable"
-                                         [ngClass]="{'fa-sort-desc': (getSortOrder(col) == -1),'fa-sort-asc': (getSortOrder(col) == 1)}"></span>
-                                    <input type="text" pInputText class="ui-column-filter" [attr.placeholder]="col.filterPlaceholder" *ngIf="col.filter" [value]="filters[col.field] ? filters[col.field].value : ''" (click)="onFilterInputClick($event)" (keyup)="onFilterKeyup($event.target.value, col.field, col.filterMatchMode)"/>
-                                </th>
-                            </tr>
-                        </template>
-                        </thead>
-                    </table>
+            
+            <template [ngIf]="scrollable">
+                <div class="ui-datatable-scrollable-wrapper ui-helper-clearfix" [ngClass]="{'max-height':scrollHeight}">
+                    <div *ngIf="frozenColumns" [pScrollableView]="frozenColumns" frozen="true" 
+                        [ngStyle]="{'width':this.frozenWidth}" class="ui-datatable-scrollable-view ui-datatable-frozen-view"></div>
+                    <div [pScrollableView]="scrollableColumns" [ngStyle]="{'width':this.unfrozenWidth, 'left': this.frozenWidth}"
+                        class="ui-datatable-scrollable-view"
+                        [ngClass]="{'ui-datatable-unfrozen-view': frozenColumns}"></div>
                 </div>
-            </div>
-            <div class="ui-datatable-scrollable-body" *ngIf="scrollable" [ngStyle]="{'width': scrollWidth}">
-                <table [class]="tableStyleClass" [ngStyle]="tableStyle">
-                    <tbody class="ui-datatable-data ui-widget-content">
-                        <template ngFor let-rowData [ngForOf]="dataToRender" let-even="even" let-odd="odd" let-rowIndex="index" [ngForTrackBy]="rowTrackBy">
-                            <tr #rowElement class="ui-widget-content" (mouseenter)="hoveredRow = $event.target" (mouseleave)="hoveredRow = null"
-                                    (click)="handleRowClick($event, rowData)" (dblclick)="rowDblclick($event,rowData)" (contextmenu)="onRowRightClick($event,rowData)"
-                                    [ngClass]="{'ui-datatable-even':even,'ui-datatable-odd':odd,'ui-state-hover': (selectionMode && rowElement == hoveredRow), 'ui-state-highlight': isSelected(rowData)}">
-                                <td *ngFor="let col of columns; let colIndex = index;" [ngStyle]="col.style" [class]="col.styleClass" [style.display]="col.hidden ? 'none' : 'table-cell'"
-                                    [ngClass]="{'ui-editable-column':col.editable,'ui-selection-column':col.selectionMode}" (click)="switchCellToEditMode($event.target,col,rowData)">
-                                    <span class="ui-column-title" *ngIf="responsive">{{col.header}}</span>
-                                    <span class="ui-cell-data" *ngIf="!col.bodyTemplate">{{resolveFieldData(rowData,col.field)}}</span>
-                                    <span class="ui-cell-data" *ngIf="col.bodyTemplate">
-                                        <p-columnBodyTemplateLoader [column]="col" [rowData]="rowData" [rowIndex]="rowIndex + first"></p-columnBodyTemplateLoader>
-                                    </span>
-                                    <input type="text" class="ui-cell-editor ui-state-highlight" *ngIf="col.editable" [(ngModel)]="rowData[col.field]"
-                                            (blur)="switchCellToViewMode($event.target,col,rowData,true)" (keydown)="onCellEditorKeydown($event, col, rowData, colIndex)"/>
-                                    <div class="ui-row-toggler fa fa-fw ui-c" [ngClass]="{'fa-chevron-circle-down':isRowExpanded(rowData), 'fa-chevron-circle-right': !isRowExpanded(rowData)}"
-                                        *ngIf="col.expander && (!col.enabledIfExists || (rowData[col.enabledIfExists] && rowData[col.enabledIfExists].length > 0))" (click)="toggleRow(rowData)"></div>
-                                    <p-dtRadioButton *ngIf="col.selectionMode=='single'" (onClick)="selectRowWithRadio($event, rowData)" [checked]="isSelected(rowData)"></p-dtRadioButton>
-                                    <p-dtCheckbox *ngIf="col.selectionMode=='multiple'" (onChange)="toggleRowWithCheckbox($event,rowData)" [checked]="isSelected(rowData)"></p-dtCheckbox>
-                                </td>
-                            </tr>
-                            <tr *ngIf="expandableRows && isRowExpanded(rowData)">
-                                <td [attr.colspan]="visibleColumns().length">
-                                    <p-rowExpansionLoader [rowData]="rowData" [template]="rowExpansionTemplate.first"></p-rowExpansionLoader>
-                                </td>
-                            </tr>
-                             <p-rowExpansionLoader *ngIf="rowGrouping && isRowExpanded(rowData)" [rowData]="rowData" [template]="groupingTemplate"></p-rowExpansionLoader>
-                        </template>
-                        
-                        <tr *ngIf="isEmpty()" class="ui-widget-content">
-                            <td [attr.colspan]="visibleColumns().length" class="ui-datatable-emptymessage">{{emptyMessage}}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            </template>
+            
             <p-paginator [rows]="rows" [first]="first" [totalRecords]="totalRecords" [pageLinkSize]="pageLinks" styleClass="ui-paginator-bottom"
                 (onPageChange)="paginate($event)" [rowsPerPageOptions]="rowsPerPageOptions" *ngIf="paginator && paginatorPosition!='top' || paginatorPosition =='both'"></p-paginator>
             <div class="ui-datatable-footer ui-widget-header" *ngIf="footer">
                 <ng-content select="p-footer"></ng-content>
             </div>
+            
+            <div class="ui-column-resizer-helper ui-state-highlight" style="display:none"></div>
+            <span class="fa fa-arrow-down ui-datatable-reorder-indicator-up" style="position: absolute; display: none;"></span>
+            <span class="fa fa-arrow-up ui-datatable-reorder-indicator-down" style="position: absolute; display: none;"></span>
         </div>
     `,
     providers: [DomHandler]
@@ -525,6 +414,8 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     @Input() scrollWidth: any;
     
     @Input() frozenWidth: any;
+    
+    @Input() unfrozenWidth: any;
 
     @Input() style: any;
 
@@ -556,10 +447,6 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     
     @Input() paginatorPosition: string = 'bottom';
             
-    @Input() groupingTemplate: TemplateRef<any>;
-
-    @Input() rowGrouping: boolean;
-    
     @Output() onEditInit: EventEmitter<any> = new EventEmitter();
 
     @Output() onEditComplete: EventEmitter<any> = new EventEmitter();
@@ -642,7 +529,7 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     
     public columnResizing: boolean;
     
-    public lastPageX: number;
+    public lastResizerHelperX: number;
         
     public documentColumnResizeListener: Function;
     
@@ -657,7 +544,7 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     public reorderIndicatorDown: any;
     
     public draggedColumn: any;
-            
+    
     public dropPosition: number;
             
     public tbody: any;
@@ -667,7 +554,7 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     public rowGroupToggleClick: boolean;
     
     public editingCell: any;
-
+    
     public stopFilterPropagation: boolean;
     
     public rowGroupMetadata: any;
@@ -678,14 +565,16 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     
     public rowExpansionTemplate: TemplateRef<any>;
     
+    public scrollBarWidth: number;
+    
     differ: any;
 
     globalFilterFunction: any;
     
     columnsSubscription: Subscription;
-
+    
     constructor(public el: ElementRef, public domHandler: DomHandler, differs: IterableDiffers, 
-            public renderer: Renderer, private changeDetector: ChangeDetectorRef) {
+            public renderer: Renderer, public changeDetector: ChangeDetectorRef) {
         this.differ = differs.find([]).create(null);
     }
 
@@ -756,7 +645,7 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
             if(this.paginator) {
                 this.updatePaginator();
             }
-            
+
             if(this.hasFilter()) {
                 if(this.lazy) {
                     //prevent loop
@@ -773,8 +662,8 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
             if(this.stopSortPropagation) {
                 this.stopSortPropagation = false;
             }
-            else if(!this.lazy && (this.sortField||this.multiSortMeta)) {     
-                if(!this.sortColumn) {
+            else if(!this.lazy && (this.sortField||this.multiSortMeta)) {  
+                if(!this.sortColumn && this.columns) {
                     this.sortColumn = this.columns.find(col => col.field === this.sortField && col.sortable === 'custom');
                 }              
                 
@@ -792,13 +681,15 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
         this.columns = this.cols.toArray();
         
         if(this.scrollable) {
-            this.frozenColumns = [];
             this.scrollableColumns = [];
             this.cols.forEach((col) => {
-                if(col.frozen)
+                if(col.frozen) {
+                    this.frozenColumns = this.frozenColumns||[];
                     this.frozenColumns.push(col);
-                else
+                } 
+                else {
                     this.scrollableColumns.push(col);
+                }
             });
         }
         
@@ -906,7 +797,7 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
             event.preventDefault();
         }
     }
-
+    
     onHeaderMousedown(event, header: any) {
         if(this.reorderableColumns) {
             if(event.target.nodeName !== 'INPUT') {
@@ -924,8 +815,9 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
         
         let targetNode = event.target.nodeName;
         if(targetNode == 'TH' || (targetNode == 'SPAN' && !this.domHandler.hasClass(event.target, 'ui-c'))) {
-            this.sortOrder = (this.sortField === column.field)  ? this.sortOrder * -1 : 1;
-            this.sortField = column.field;
+            let columnSortField = column.sortField||column.field;
+            this.sortOrder = (this.sortField === columnSortField)  ? this.sortOrder * -1 : 1;
+            this.sortField = columnSortField;
             this.sortColumn = column;
             let metaKey = event.metaKey||event.ctrlKey;
 
@@ -1051,14 +943,16 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
             return false;
         }
         
+        let columnSortField = column.sortField||column.field;
+        
         if(this.sortMode === 'single') {
-            return (this.sortField && column.field === this.sortField);
+            return (this.sortField && columnSortField === this.sortField);
         }
         else if(this.sortMode === 'multiple') {
             let sorted = false;
             if(this.multiSortMeta) {
                 for(let i = 0; i < this.multiSortMeta.length; i++) {
-                    if(this.multiSortMeta[i].field == column.field) {
+                    if(this.multiSortMeta[i].field == columnSortField) {
                         sorted = true;
                         break;
                     }
@@ -1070,15 +964,17 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
 
     getSortOrder(column: Column) {
         let order = 0;
+        let columnSortField = column.sortField||column.field;
+        
         if(this.sortMode === 'single') {
-            if(this.sortField && column.field === this.sortField) {
+            if(this.sortField && columnSortField === this.sortField) {
                 order = this.sortOrder;
             }
         }
         else if(this.sortMode === 'multiple') {
             if(this.multiSortMeta) {
                 for(let i = 0; i < this.multiSortMeta.length; i++) {
-                    if(this.multiSortMeta[i].field == column.field) {
+                    if(this.multiSortMeta[i].field == columnSortField) {
                         order = this.multiSortMeta[i].order;
                         break;
                     }
@@ -1307,17 +1203,8 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
         }
 
         this.filterTimeout = setTimeout(() => {
-            if(value && value.trim().length)
-            this.filters[field] = {value: value, matchMode: matchMode};
-            else if(this.filters[field])
-                delete this.filters[field];
-            
-            if(this.lazy) {
-                this.lazyFilteredByUser = true;
-            }
-            
-            this.filter();
-            this.filterTimeout = null;
+            this.filter(value, field, matchMode);
+            this.filterTimeout = null;            
         }, this.filterDelay);
     }
     
@@ -1326,10 +1213,6 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
             this.filters[field] = {value: value, matchMode: matchMode};
         else if(this.filters[field])
             delete this.filters[field];
-        
-        if(this.lazy) {
-            this.stopFilterPropagation = true;
-        }
         
         this._filter(); 
     }
@@ -1348,6 +1231,7 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
         this.first = 0;
         
         if(this.lazy) {
+            this.stopFilterPropagation = true;
             this.onLazyLoad.emit(this.createLazyLoadMetadata());
         }
         else {
@@ -1496,9 +1380,8 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
         }
     }
 
-    switchCellToEditMode(element: any, column: Column, rowData: any) {
-        if(!this.selectionMode && this.editable && column.editable) {
-            let cell = this.findCell(element);            
+    switchCellToEditMode(cell: any, column: Column, rowData: any) {
+        if(!this.selectionMode && this.editable && column.editable) {           
             if(cell != this.editingCell) {
                 if(this.editingCell && this.domHandler.find(this.editingCell, '.ng-invalid.ng-dirty').length == 0) {
                     this.domHandler.removeClass(this.editingCell, 'ui-cell-editing');
@@ -1606,25 +1489,28 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     }
     
     initColumnResize(event) {
+        let container = this.el.nativeElement.children[0];
+        let containerLeft = this.domHandler.getOffset(container).left;
         this.resizeColumn = event.target.parentElement;
         this.columnResizing = true;
-        this.lastPageX = event.pageX;
+        this.lastResizerHelperX = (event.pageX - containerLeft);
     }
     
     onColumnResize(event) {
         let container = this.el.nativeElement.children[0];
+        let containerLeft = this.domHandler.getOffset(container).left;
         this.domHandler.addClass(container, 'ui-unselectable-text');
-        this.resizerHelper.style.height = container.offsetHeight - 4 + 'px';
-        this.resizerHelper.style.top = container.offsetTop + 'px';
-        if(event.pageX > container.offsetLeft && event.pageX < (container.offsetLeft + container.offsetWidth)) {
-            this.resizerHelper.style.left = event.pageX + 'px';
+        this.resizerHelper.style.height = container.offsetHeight + 'px';
+        this.resizerHelper.style.top = 0 + 'px';
+        if(event.pageX > containerLeft && event.pageX < (containerLeft + container.offsetWidth)) {
+            this.resizerHelper.style.left = (event.pageX - containerLeft) + 'px';
         }
         
         this.resizerHelper.style.display = 'block';
     }
     
     onColumnResizeEnd(event) {
-        let delta = this.resizerHelper.offsetLeft - this.lastPageX;
+        let delta = this.resizerHelper.offsetLeft - this.lastResizerHelperX;
         let columnWidth = this.resizeColumn.offsetWidth;
         let newColumnWidth = columnWidth + delta;
         let minWidth = this.resizeColumn.style.minWidth||15;
@@ -1639,20 +1525,32 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
                     if(nextColumn) {
                         nextColumn.style.width = nextColumnWidth + 'px';
                     }
+                    
+                    if(this.scrollable) {
+                        let colGroup = this.domHandler.findSingle(this.el.nativeElement, 'colgroup.ui-datatable-scrollable-colgroup');
+                        let resizeColumnIndex = this.domHandler.index(this.resizeColumn);
+                        colGroup.children[resizeColumnIndex].style.width = newColumnWidth + 'px';
+                        
+                        if(nextColumn) {
+                            colGroup.children[resizeColumnIndex + 1].style.width = nextColumnWidth + 'px';
+                        }
+                    }
                 }
             }
             else if(this.columnResizeMode === 'expand') {
                 this.tbody.parentElement.style.width = this.tbody.parentElement.offsetWidth + delta + 'px';
                 this.resizeColumn.style.width = newColumnWidth + 'px';
+                let containerWidth = this.tbody.parentElement.style.width;
                 
-                if(this.header) {
-                    let headerEL = this.domHandler.findSingle(this.el.nativeElement, 'div.ui-datatable-header');
-                    headerEL.style.width = this.tbody.parentElement.style.width;
-            }    
-            
-                if(this.footer) {
-                    let footerEL = this.domHandler.findSingle(this.el.nativeElement, 'div.ui-datatable-footer');
-                    footerEL.style.width = this.tbody.parentElement.style.width;
+                if(this.scrollable) {
+                    this.scrollBarWidth = this.scrollBarWidth||this.domHandler.calculateScrollbarWidth();
+                    this.el.nativeElement.children[0].style.width = parseFloat(containerWidth) + this.scrollBarWidth + 'px';
+                    let colGroup = this.domHandler.findSingle(this.el.nativeElement, 'colgroup.ui-datatable-scrollable-colgroup');
+                    let resizeColumnIndex = this.domHandler.index(this.resizeColumn);
+                    colGroup.children[resizeColumnIndex].style.width = newColumnWidth + 'px';
+                }
+                else {
+                    this.el.nativeElement.children[0].style.width = containerWidth;
                 }
             }    
             
@@ -1688,28 +1586,32 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     onColumnDragover(event) {
         if(this.reorderableColumns && this.draggedColumn) {
             event.preventDefault();
+            let iconWidth = this.domHandler.getHiddenElementOuterWidth(this.reorderIndicatorUp);
+            let iconHeight = this.domHandler.getHiddenElementOuterHeight(this.reorderIndicatorUp);
             let dropHeader = this.findParentHeader(event.target);
+            let container = this.el.nativeElement.children[0];
+            let containerOffset = this.domHandler.getOffset(container);
+            let dropHeaderOffset = this.domHandler.getOffset(dropHeader);
             
             if(this.draggedColumn != dropHeader) {
-                let targetPosition = dropHeader.getBoundingClientRect();
-                let targetLeft = targetPosition.left + this.domHandler.getWindowScrollLeft();
-                let targetTop =  targetPosition.top + this.domHandler.getWindowScrollTop();
-                let columnCenter = targetLeft + dropHeader.offsetWidth / 2;
+                let targetLeft =  dropHeaderOffset.left - containerOffset.left;
+                let targetTop =  containerOffset.top - dropHeaderOffset.top;
+                let columnCenter = dropHeaderOffset.left + dropHeader.offsetWidth / 2;
                 
-                this.reorderIndicatorUp.style.top = (targetTop - 16) + 'px';
-                this.reorderIndicatorDown.style.top = targetTop + dropHeader.offsetHeight + 'px';
+                this.reorderIndicatorUp.style.top = dropHeaderOffset.top - containerOffset.top - (iconHeight - 1) + 'px';
+                this.reorderIndicatorDown.style.top = dropHeaderOffset.top - containerOffset.top + dropHeader.offsetHeight + 'px';
 
                 if(event.pageX > columnCenter) {
-                    this.reorderIndicatorUp.style.left = (targetLeft + dropHeader.offsetWidth - 8) + 'px';
-                    this.reorderIndicatorDown.style.left = (targetLeft + dropHeader.offsetWidth - 8)+ 'px';
+                    this.reorderIndicatorUp.style.left = (targetLeft + dropHeader.offsetWidth - Math.ceil(iconWidth / 2)) + 'px';
+                    this.reorderIndicatorDown.style.left = (targetLeft + dropHeader.offsetWidth - Math.ceil(iconWidth / 2))+ 'px';
                     this.dropPosition = 1;
                 }
                 else {
-                    this.reorderIndicatorUp.style.left = (targetLeft - 8) + 'px';
-                    this.reorderIndicatorDown.style.left = (targetLeft - 8)+ 'px';
+                    this.reorderIndicatorUp.style.left = (targetLeft - Math.ceil(iconWidth / 2)) + 'px';
+                    this.reorderIndicatorDown.style.left = (targetLeft - Math.ceil(iconWidth / 2))+ 'px';
                     this.dropPosition = -1;
                 }
-                
+                                
                 this.reorderIndicatorUp.style.display = 'block';
                 this.reorderIndicatorDown.style.display = 'block';
             }
@@ -1915,7 +1817,7 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
         //headers
         for(let i = 0; i < this.columns.length; i++) {
             if(this.columns[i].field) {
-                csv += this.columns[i].field;
+                csv += this.columns[i].header || this.columns[i].field;
                 
                 if(i < (this.columns.length - 1)) {
                     csv += this.csvSeparator;
@@ -1956,8 +1858,8 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
             }
             else {
                 csv = 'data:text/csv;charset=utf-8,' + csv;
-        window.open(encodeURI(csv));
-    }
+                window.open(encodeURI(csv));
+            }
             document.body.removeChild(link);
         }
     }
@@ -1965,7 +1867,7 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     getBlockableElement(): HTMLElement {
         return this.el.nativeElement.children[0];
     }
-
+    
     getRowStyleClass(rowData: any, rowIndex: number) {
         let styleClass = 'ui-widget-content';
         if(this.rowStyleClass) {
@@ -1982,9 +1884,13 @@ export class DataTable implements AfterViewChecked,AfterViewInit,AfterContentIni
     }
     
     get containerWidth() {
-        if(this.scrollable && this.scrollWidth) {
-            var total = parseInt(this.scrollWidth);
-            return this.frozenWidth ? (total + parseInt(this.frozenWidth) + 'px') : total + 'px';
+        if(this.scrollable) {
+            if(this.scrollWidth) {
+                return this.scrollWidth;
+            }
+            else if(this.frozenWidth && this.unfrozenWidth) {
+                return parseFloat(this.frozenWidth) + parseFloat(this.unfrozenWidth) + 'px';
+            }
         }
         else {
             return this.style ? this.style.width : null;

@@ -65,6 +65,7 @@ export class TemplateWrapper implements OnInit {
 })
 export class Column implements AfterContentInit{
     @Input() field: string;
+    @Input() sortField: string;
     @Input() header: string;
     @Input() footer: string;
     @Input() sortable: any;
@@ -77,7 +78,6 @@ export class Column implements AfterContentInit{
     @Input() styleClass: string;
     @Input() hidden: boolean;
     @Input() expander: boolean;
-    @Input() enabledIfExists: string;
     @Input() selectionMode: string;
     @Input() filterPlaceholder: string;
     @Input() frozen: boolean;
